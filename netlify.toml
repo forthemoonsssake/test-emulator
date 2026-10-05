@@ -1,0 +1,8 @@
+[build]
+  base = "browser-emulator"
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Next.js 16 and the serverless Chromium runtime require a current Node LTS.
+  NODE_VERSION = "24"

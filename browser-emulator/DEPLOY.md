@@ -1,60 +1,68 @@
 # Deployment Guide
 
-## Local (full experience — 3 engines + WebSocket + real Tor)
+## Netlify (serverless)
+
+The repository includes a root-level `netlify.toml`. It sets this app's base
+folder to `browser-emulator`, runs `npm run build`, and publishes the Next.js
+build. Netlify automatically applies its maintained Next.js adapter; you do not
+need to add a legacy `@netlify/plugin-nextjs` plugin or change the site base
+folder in the dashboard. The configuration pins the build/runtime to Node 24,
+which is supported by the bundled serverless Chromium package.
+
+Deploy by importing this repository in Netlify and triggering a deploy. No
+secrets or database are required for the app to start. Optionally configure
+`DATABASE_URL` with a hosted PostgreSQL URL to enable browsing history.
+
+Netlify uses the serverless-compatible mode automatically:
+
+- **Browser engine:** bundled `@sparticuz/chromium`; Firefox and WebKit profiles
+  are shown as unavailable.
+- **Transport:** HTTP frame polling. A separate long-running WebSocket listener
+  is not started inside serverless functions.
+- **Tor:** disabled on serverless because a Tor daemon and persistent SOCKS
+  listener cannot run there. The Tor profile is marked unavailable instead of
+  accepting a launch that would fail.
+- **State:** browser sessions live in the warm server-function instance and
+  may be lost when Netlify recycles or scales that instance. For durable,
+  always-on sessions, deploy to a persistent Node host (VM, Fly.io, Render, or
+  Railway) instead.
+
+The Chromium archive is explicitly included in Next.js output-file tracing so
+the function can unpack it at runtime. The profile-list endpoint does not launch
+Chromium just to render the page; Chromium starts only after the user launches
+a session, avoiding a slow or timed-out homepage request.
+
+## Vercel (serverless)
+
+Vercel uses the same serverless Chromium and HTTP-polling strategy. Deploy with
+the Next.js framework preset. The app runs without a database; configure
+`DATABASE_URL` only if you want browsing history.
+
+## Local (full experience — Chromium, Firefox, WebKit, WebSocket, optional Tor)
 
 ```bash
+cd browser-emulator
 npm install
 npx playwright install --with-deps chromium firefox webkit
 
-# Real Tor (optional but recommended): the app auto-starts it on demand
+# Optional: install Tor locally; the app can also start it on demand.
 sudo apt-get install tor        # macOS: brew install tor
 
 npm run build && npm start
-# open http://localhost:3000  (WS side-channel on :3001)
+# open http://localhost:3000  (WebSocket side-channel on :3001)
 ```
 
-| Component | Behaviour |
+| Component | Local | Netlify / Vercel |
+|---|---|---|
+| Engines | Chromium, Firefox, WebKit | Chromium only |
+| Streaming | WebSocket + HTTP fallback | HTTP polling |
+| Tor | Real Tor daemon, when available | Unavailable |
+| Database | Optional PostgreSQL history | Optional hosted PostgreSQL history |
+
+## Environment variables
+
+| Variable | Purpose |
 |---|---|
-| Engines | Chromium, Firefox, WebKit — real binaries, pooled |
-| Streaming | WebSocket `PORT+1` (CDP screencast on Chromium) with HTTP fallback |
-| Tor | **Real onion routing** through `127.0.0.1:9050` (auto-spawned). Missing binary ⇒ clearly-labeled simulated mode |
-| Database | Local PostgreSQL via `DATABASE_URL` (history only — optional) |
-
-## Vercel (serverless mode)
-
-Serverless platforms cannot run long-lived WebSocket servers or 300 MB
-Firefox/WebKit binaries, so the app automatically switches strategy when
-`VERCEL=1` is detected:
-
-- **Engine:** lambda-optimised Chromium via `@sparticuz/chromium` (Firefox/WebKit marked unavailable in the UI)
-- **Transport:** HTTP frame polling (the WebSocket server is not started)
-- **Tor:** unavailable (no daemons on serverless) — Tor profile runs in labeled simulated mode
-- **Limits:** sessions live in warm function instances; requests are capped at 60 s (`maxDuration`), so long idle gaps may require "wake" activity
-
-Deploy:
-
-```bash
-npm i -g vercel
-vercel            # framework: Next.js — zero config needed
-```
-
-Environment variables (optional):
-
-| Var | Purpose |
-|---|---|
-| `DATABASE_URL` | Hosted Postgres (Neon/Supabase) with SSL for browsing history. App runs fine without it |
-| `TOR_SOCKS_PORT` | Override Tor SOCKS port (local only, default `9050`) |
-| `TOR_BINARY` | Override tor binary path (local only) |
-
-Notes for serverless mode:
-
-1. First launch (cold start) downloads/unpacks the Chromium binary — expect a few seconds; the UI shows "launching chromium".
-2. Session stickiness relies on warm-instance reuse, which Vercel performs best-effort. For production-grade stickiness put the API behind a single-instance target (Fly.io, Render, Railway, a VM) — the same build works there unchanged, and the WebSocket transport re-activates automatically outside Vercel.
-3. Screenshots and navigation are stateless-safe: worst case the client re-creates the session transparently.
-
-## Verifying Tor is real
-
-Start a Tor session and visit `https://check.torproject.org` —
-the page inside the emulator reports *“Congratulations. This browser is
-configured to use Tor.”* The status bar chip reads **onion verified**
-whenever traffic (including DNS) is truly routed through a live circuit.
+| `DATABASE_URL` | Optional PostgreSQL connection for browsing history |
+| `TOR_SOCKS_PORT` | Override the local Tor SOCKS port (default `9050`) |
+| `TOR_BINARY` | Override the local Tor executable path |

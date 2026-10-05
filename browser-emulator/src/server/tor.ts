@@ -2,19 +2,12 @@ import { execSync, spawn } from "child_process";
 import { existsSync, mkdirSync } from "fs";
 import net from "net";
 import os from "os";
+import { isServerless } from "@/lib/serverless";
 
 const SOCKS_PORT = Number(process.env.TOR_SOCKS_PORT || 9050);
 const SOCKS_HOST = process.env.TOR_SOCKS_HOST || "127.0.0.1";
 
 export const TOR_SOCKS = `socks5://${SOCKS_HOST}:${SOCKS_PORT}`;
-
-export function isServerless(): boolean {
-  return (
-    process.env.VERCEL === "1" ||
-    !!process.env.AWS_LAMBDA_FUNCTION_NAME ||
-    !!process.env.LAMBDA_TASK_ROOT
-  );
-}
 
 function portOpen(host: string, port: number, timeoutMs = 800): Promise<boolean> {
   return new Promise((resolve) => {
@@ -43,13 +36,13 @@ const KNOWN_PATHS = [
   "/usr/bin/tor",
   "/usr/local/bin/tor",
   "/opt/homebrew/bin/tor",
-  path.join(os.homedir(), ".mirage-tor", "tor", "tor.exe"),
-  path.join(os.homedir(), ".mirage-tor", "tor", "tor"),
+  path.join(/*turbopackIgnore: true*/ os.homedir(), ".mirage-tor", "tor", "tor.exe"),
+  path.join(/*turbopackIgnore: true*/ os.homedir(), ".mirage-tor", "tor", "tor"),
 ].filter(Boolean) as string[];
 
 function findTorBinary(): string | null {
   for (const p of KNOWN_PATHS) {
-    try { if (existsSync(p)) return p; } catch {}
+    try { if (existsSync(/*turbopackIgnore: true*/ p)) return p; } catch {}
   }
   return null;
 }
@@ -83,9 +76,9 @@ async function downloadExpertBundle(platform: NodeJS.Platform, arch: string): Pr
     const url = `https://dist.torproject.org/torbrowser/${latest}/${filename}`;
     console.log(`[tor] downloading from: ${url}`);
     
-    const targetDir = path.join(os.homedir(), ".mirage-tor");
-    mkdirSync(targetDir, { recursive: true });
-    const tarballPath = path.join(targetDir, "bundle.tar.gz");
+    const targetDir = path.join(/*turbopackIgnore: true*/ os.homedir(), ".mirage-tor");
+    mkdirSync(/*turbopackIgnore: true*/ targetDir, { recursive: true });
+    const tarballPath = path.join(/*turbopackIgnore: true*/ targetDir, "bundle.tar.gz");
 
     // We can use built-in curl which exists on Windows 10+ and mac/linux
     execSync(`curl -s -L -o "${tarballPath}" "${url}"`, { stdio: "inherit" });

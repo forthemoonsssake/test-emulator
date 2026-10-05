@@ -65,13 +65,7 @@ export default function TopBar({
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [histLoaded, setHistLoaded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Sync the address bar with the page URL when the user isn't typing.
-  useEffect(() => {
-    if (!editing) {
-      setValue(meta?.url && meta.url !== "about:blank" ? meta.url : "");
-    }
-  }, [meta?.url, editing]);
+  const currentUrl = meta?.url && meta.url !== "about:blank" ? meta.url : "";
 
   // Global shortcuts: ⌘/Ctrl+L focuses the bar, Alt+←/→ navigate.
   useEffect(() => {
@@ -190,9 +184,10 @@ export default function TopBar({
           )}
           <input
             ref={inputRef}
-            value={value}
+            value={editing ? value : currentUrl}
             onChange={(e) => setValue(e.target.value)}
             onFocus={() => {
+              setValue(currentUrl);
               setEditing(true);
               loadHistory();
             }}

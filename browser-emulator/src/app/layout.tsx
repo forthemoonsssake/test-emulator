@@ -1,19 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import type { ReactNode } from "react";
 import "./globals.css";
-
-const space = Space_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-space",
-  display: "swap",
-});
-
-const jb = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-jb",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "mirage.os — Local Remote Browser",
@@ -27,7 +14,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${space.variable} ${jb.variable}`}>
+    <html lang="en">
       <body className="font-sans antialiased">{children}</body>
     </html>
   );

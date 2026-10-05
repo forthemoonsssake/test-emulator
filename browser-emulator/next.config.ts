@@ -5,10 +5,11 @@ const nextConfig: NextConfig = {
   // bundled binaries — keep them out of the JS bundler.
   serverExternalPackages: ["playwright", "playwright-core", "ws", "@sparticuz/chromium"],
 
-  // Vercel: make sure the compressed lambda-Chromium binaries are traced
-  // into the serverless function bundle.
+  // Include the compressed Chromium assets in serverless API bundles. This
+  // is needed by both Netlify's Next.js adapter and Vercel at runtime.
   outputFileTracingIncludes: {
-    "/api/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/session": ["./node_modules/@sparticuz/chromium/bin/**"],
+    "/api/session/**/*": ["./node_modules/@sparticuz/chromium/bin/**"],
   },
 };
 
