@@ -31,7 +31,6 @@ export default function Stage({ profile, meta, status, sendInput, registerTarget
   const [hasFrame, setHasFrame] = useState(false);
   const [focused, setFocused] = useState(false);
   const [cursor, setCursor] = useState<{ x: number; y: number; on: boolean }>({ x: 0, y: 0, on: false });
-  const [imgElement, setImgElement] = useState<HTMLImageElement | null>(null);
 
   const moveThrottleRef = useRef(0);
   const scrollRef = useRef({ x: 0, y: 0, id: -1, on: false });
@@ -63,22 +62,29 @@ export default function Stage({ profile, meta, status, sendInput, registerTarget
     return () => ro.disconnect();
   }, [devW, devH]);
 
+  useEffect(() => {
+    setHasFrame(false);
+    scrollRef.current = { x: 0, y: 0, id: -1, on: false };
+  }, [profile.id]);
+
   /* ------------------------------------------- coordinate mapping */
   const toDevice = useCallback(
     (clientX: number, clientY: number) => {
-      if (!imgElement) return { x: 0, y: 0 };
-      const rect = imgElement.getBoundingClientRect();
+      const img = imgElRef.current;
+      if (!img) return { x: 0, y: 0 };
+      const rect = img.getBoundingClientRect();
       return {
         x: ((clientX - rect.left) / rect.width) * profile.width,
         y: ((clientY - rect.top) / rect.height) * profile.height,
       };
     },
-    [imgElement, profile.width, profile.height]
+    [profile.width, profile.height]
   );
 
+  const imgElRef = useRef<HTMLImageElement | null>(null);
   const setImg = useCallback(
     (el: HTMLImageElement | null) => {
-      setImgElement(el);
+      imgElRef.current = el;
       registerTarget(el);
     },
     [registerTarget]

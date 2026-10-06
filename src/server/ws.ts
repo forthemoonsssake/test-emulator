@@ -8,7 +8,6 @@ import {
   touch,
 } from "./browser";
 import type { InputEvent, NavAction } from "@/lib/types";
-import { isServerless } from "@/lib/serverless";
 
 /**
  * Dedicated WebSocket server for frame streaming + input.
@@ -21,9 +20,9 @@ export function startWsServer() {
   if (g.__rb_wss_started) return;
   g.__rb_wss_started = true;
 
-  // Serverless platforms (including Netlify) cannot keep a listener alive.
-  // The client automatically falls back to HTTP frame polling there.
-  if (isServerless()) {
+  // Vercel / serverless: no long-running listeners possible. The client
+  // automatically falls back to HTTP frame polling in that environment.
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
     console.log("[rb-ws] serverless environment detected — websocket disabled");
     return;
   }

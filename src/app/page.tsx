@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Hero, { type EngineInfo, type HeroProfile } from "@/components/emulator/Hero";
 import TopBar from "@/components/emulator/TopBar";
 import Stage from "@/components/emulator/Stage";
@@ -21,14 +21,6 @@ export default function Page() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const { state, start, stop, nav, sendInput, registerTarget } = useRemoteSession();
 
-  const toggleFs = useCallback(() => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
-  }, []);
-
   useEffect(() => {
     const onFsChange = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", onFsChange);
@@ -43,7 +35,15 @@ export default function Page() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [toggleFs]);
+  }, []);
+
+  const toggleFs = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
 
   useEffect(() => {
     fetch("/api/profiles")

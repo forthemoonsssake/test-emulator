@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { activeSessionCount, createSession, sessionMeta } from "@/server/browser";
-import { isServerless } from "@/lib/serverless";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-// Bound cold Chromium startup to the maximum supported serverless function window.
+// Vercel: allow the longest possible function window (60s on Hobby).
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
@@ -18,12 +17,6 @@ export async function POST(req: NextRequest) {
   if (!profileId) {
     return NextResponse.json({ error: "profileId is required" }, { status: 400 });
   }
-  if (profileId === "tor" && isServerless()) {
-    return NextResponse.json(
-      { error: "Tor routing is not available on serverless deploys. Use a local deployment for Tor." },
-      { status: 503 }
-    );
-  }
   try {
     const session = await createSession(profileId, body.url, body.proxies);
     const wsPort = Number(process.env.WS_PORT || Number(process.env.PORT || 3000) + 1);
@@ -34,7 +27,7 @@ export async function POST(req: NextRequest) {
         meta: sessionMeta(session),
         torMode: session.torMode,
         activeProxy: session.activeProxy,
-        serverless: isServerless(),
+        serverless: !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME),
         wsPort,
         active: activeSessionCount(),
       },

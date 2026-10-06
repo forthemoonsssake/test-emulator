@@ -18,8 +18,7 @@ import type {
   SessionMeta,
 } from "@/lib/types";
 import { getProfile } from "./profiles";
-import { ensureTor, TOR_SOCKS } from "./tor";
-import { isServerless } from "@/lib/serverless";
+import { ensureTor, isServerless, TOR_SOCKS } from "./tor";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -175,20 +174,6 @@ function stealthFor(engine: Engine): string {
 /*  Engine pool                                                        */
 /* ------------------------------------------------------------------ */
 
-function prepareNetlifyChromiumRuntime(): void {
-  const netlifyRuntime = process.env.NETLIFY === "1" || process.env.NETLIFY?.toLowerCase() === "true";
-  const hasAwsRuntimeMarker =
-    !!process.env.AWS_LAMBDA_JS_RUNTIME || !!process.env.AWS_EXECUTION_ENV;
-  const nodeMajor = Number(process.versions.node.split(".")[0]);
-
-  // @sparticuz/chromium uses AWS_LAMBDA_JS_RUNTIME to load its AL2023 shared
-  // libraries. Netlify normally supplies this marker; infer it when NETLIFY
-  // is present but the runtime environment omitted it.
-  if (netlifyRuntime && !hasAwsRuntimeMarker && [20, 22, 24].includes(nodeMajor)) {
-    process.env.AWS_LAMBDA_JS_RUNTIME = `nodejs${nodeMajor}.x`;
-  }
-}
-
 const ENGINE_DEFS: Record<Engine, { type: () => BrowserType; args?: string[] }> = {
   chromium: {
     type: () => chromium,
@@ -233,10 +218,7 @@ export async function getEngineBrowser(engine: Engine): Promise<Browser> {
             `${engine} can't run on serverless platforms — Chromium only there`
           );
         }
-        // Use the Lambda-optimised Chromium build. Netlify normally provides
-        // AWS_LAMBDA_JS_RUNTIME; prepare the marker before importing the
-        // package so it can also unpack its Amazon Linux shared libraries.
-        prepareNetlifyChromiumRuntime();
+        // Vercel / AWS Lambda: use the lambda-optimised Chromium build.
         const sparticuz = (await import("@sparticuz/chromium")).default;
         sparticuz.setGraphicsMode = false;
         const executablePath = await sparticuz.executablePath();
@@ -325,18 +307,14 @@ export function probeEngines(): Promise<void> {
   if (!s.probing) {
     s.probing = (async () => {
       if (isServerless()) {
-        // Only the bundled Chromium build can run on serverless. Do not launch
-        // it just to render the profile picker: unpacking Chromium can make a
-        // simple page load exceed the platform's function timeout. The real
-        // launch happens lazily when the user starts a session.
+        // Only Chromium is possible on serverless — mark the rest unavailable
+        // without wasting cold-start time trying.
         for (const e of ["firefox", "webkit"] as const) {
           const entry = engineEntry(e);
           entry.available = false;
           entry.error = "not available on serverless deploys";
         }
-        const chromiumEntry = engineEntry("chromium");
-        if (chromiumEntry.available === null) chromiumEntry.available = true;
-        chromiumEntry.error = null;
+        await Promise.allSettled([getEngineBrowser("chromium")]);
         return;
       }
       await Promise.allSettled([

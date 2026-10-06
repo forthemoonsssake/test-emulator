@@ -1,19 +1,7 @@
-# Node / Next.js
-**/node_modules/
-**/.next/
-**/out/
-**/build/
-**/dist/
-**/*.tsbuildinfo
-**/next-env.d.ts
-
-# Netlify local state
-.netlify/
-**/.netlify/
-
-# Local environment and logs
-.env*
-!.env.example
-npm-debug.log*
-yarn-debug.log*
-.DS_Store
+node_modules
+.next
+.vercel
+.env
+.env.*
+next-env.d.ts
+*.log

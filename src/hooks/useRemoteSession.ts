@@ -104,7 +104,7 @@ export function useRemoteSession() {
         body: JSON.stringify({ url: meta.url, title: meta.title, profileLabel, engine: state.profile?.engine }),
       }).catch(() => {});
     }
-  }, [state.profile?.id, state.profile?.label, state.profile?.engine]);
+  }, [state.profile?.label, state.profile?.engine]);
 
   /* ------------------------------------------------ transports */
 
